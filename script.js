@@ -153,7 +153,7 @@ if(window.firebase){
 firebase.auth().onAuthStateChanged(async user=>{
     currentUser = user || null;
     authReady = true;
-    if($('userBadge'))$('userBadge').textContent=user?(user.email||user.displayName||'Đã đăng nhập'):'Khách trải nghiệm';
+if($('userBadge'))$('userBadge').textContent=!authReady?'Đang tải tài khoản…':user?(user.email||user.displayName||'Đã đăng nhập'):'Khách trải nghiệm';
     if($('welcome'))$('welcome').textContent=user?'Chào mừng, '+(user.displayName||user.email):'Chào mừng bạn!';
     if($('authBtn'))$('authBtn').textContent=user?'Tài khoản':'Đăng nhập';
     if($('authForm'))$('authForm').classList.toggle('hidden',!!user);
