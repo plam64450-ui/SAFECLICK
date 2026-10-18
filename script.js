@@ -15,8 +15,67 @@ const calls=[
 {who:"“Người thân cần giúp gấp”",line:"Mình đang gặp chuyện, chuyển tiền vào tài khoản mới ngay nhé. Đừng gọi số cũ, không có thời gian giải thích!",opts:["Chuyển ngay vì giọng quen","Hỏi thêm dữ liệu riêng tư qua cuộc gọi này","Kết thúc và gọi lại số đã lưu hoặc xác minh qua người thân khác"],correct:2,skill:"Xác minh độc lập",why:"Giọng nói và câu chuyện khẩn cấp không đủ xác thực danh tính. Xác minh bằng kênh khác."},
 {who:"“Cơ quan điều tra”",line:"Bạn có liên quan đến vụ việc. Giữ bí mật, gửi ảnh giấy tờ và làm theo ngay để tránh bị phạt.",opts:["Gửi ảnh giấy tờ","Kết thúc cuộc gọi, nói với người tin cậy và tự xác minh qua cơ quan chính thức","Tiếp tục làm theo để biết thêm"],correct:1,skill:"Kiểm soát áp lực",why:"Đe dọa, ép giữ bí mật và đòi dữ liệu nhạy cảm là dấu hiệu cảnh báo. Không gửi giấy tờ qua cuộc gọi chưa xác minh."}
 ];
-function getResults(){try{return JSON.parse(localStorage.getItem('safeclickResults')||'{}')}catch{return {}}}
-function setResults(r){localStorage.setItem('safeclickResults',JSON.stringify(r))}
+// Kết quả được tách theo tài khoản để tránh người dùng chung máy xem nhầm dữ liệu.
+let currentUser = null;
+let cloudSyncReady = false;
+function resultStorageKey(){return currentUser ? `safeclickResults_${currentUser.uid}` : 'safeclickResultsGuest'}
+function getResults(){
+  try {
+    const key=resultStorageKey();
+    let raw=localStorage.getItem(key);
+    // Chuyển kết quả từ phiên bản cũ thành dữ liệu khách trên chính thiết bị này.
+    if(!currentUser && raw===null){
+      const old=localStorage.getItem('safeclickResults');
+      if(old!==null){localStorage.setItem('safeclickResultsGuest',old);localStorage.removeItem('safeclickResults');raw=old;}
+    }
+    return JSON.parse(raw||'{}');
+  } catch { return {}; }
+}
+function setResults(r){
+  localStorage.setItem(resultStorageKey(),JSON.stringify(r));
+  if(currentUser) saveResultsToCloud(r);
+}
+function setSyncStatus(message,kind=''){
+  const el=$('syncStatus');
+  if(!el)return;
+  el.textContent=message;
+  el.className='feedback '+kind;
+  el.classList.remove('hidden');
+}
+async function saveResultsToCloud(results){
+  if(!currentUser || !window.firebase || !firebase.firestore)return;
+  try {
+    await firebase.firestore().collection('users').doc(currentUser.uid)
+      .collection('progress').doc('main')
+      .set({results, updatedAt:firebase.firestore.FieldValue.serverTimestamp()}, {merge:true});
+    cloudSyncReady=true;
+    setSyncStatus('✓ Kết quả đã đồng bộ lên tài khoản Firebase.','good');
+  } catch(err) {
+    cloudSyncReady=false;
+    console.error('Không thể đồng bộ SAFECLICK:',err);
+    setSyncStatus('Chưa đồng bộ được. Hãy kiểm tra Firestore Rules và việc bật Cloud Firestore.','bad');
+  }
+}
+async function loadResultsFromCloud(user){
+  if(!user || !window.firebase || !firebase.firestore){
+    setSyncStatus('Firebase Firestore chưa được nạp. Kiểm tra kết nối hoặc các thẻ script.','bad');
+    return;
+  }
+  setSyncStatus('Đang tải dữ liệu luyện tập của tài khoản…');
+  try {
+    const ref=firebase.firestore().collection('users').doc(user.uid).collection('progress').doc('main');
+    const snap=await ref.get();
+    const results=snap.exists && snap.data().results && typeof snap.data().results==='object' ? snap.data().results : {};
+    localStorage.setItem(`safeclickResults_${user.uid}`,JSON.stringify(results));
+    cloudSyncReady=true;
+    setSyncStatus(snap.exists?'✓ Đã tải dữ liệu từ Firebase.':'Tài khoản mới: kết quả sẽ được lưu lên Firebase sau lượt luyện tập đầu tiên.','good');
+    renderRooms();updateHome();report();
+  } catch(err) {
+    cloudSyncReady=false;
+    console.error('Không thể tải dữ liệu SAFECLICK:',err);
+    setSyncStatus('Không tải được dữ liệu. Hãy kiểm tra Firestore Rules và việc bật Cloud Firestore.','bad');
+  }
+}
 function updateHome(){const r=getResults(),a=Object.values(r);const sum=a.reduce((n,x)=>n+x.points,0),good=a.filter(x=>x.correct).length;if($('score'))$('score').textContent=sum;if($('done'))$('done').textContent=a.length;if($('rate'))$('rate').textContent=a.length?Math.round(good/a.length*100)+'%':'—';if($('overall'))$('overall').style.width=Math.min(100,a.length/9*100)+'%';if($('progressText'))$('progressText').textContent=a.length?`Đã ghi nhận ${a.length} lượt tình huống.`:'Bắt đầu với một phòng tập bất kỳ.'}
 function renderRooms(){const el=$('rooms');if(!el)return;const r=getResults();el.innerHTML=data.map(x=>{const done=r[x.id];return `<article class="room"><div class="emoji">${x.icon}</div><div class="meta"><span>${x.level}</span><span class="pill">${done?'Đã hoàn thành':'Chưa hoàn thành'}</span></div><h3>${x.title}</h3><p>${x.desc}</p><div class="meta"><span>🎯 ${x.skill}</span><span>${done?done.points+'/100':'1 tình huống'}</span></div><button class="${done?'':'primary'}" data-start="${x.id}">${done?'Luyện lại':'Bắt đầu phòng'} →</button></article>`}).join('');el.querySelectorAll('[data-start]').forEach(b=>b.onclick=()=>startRoom(b.dataset.start))}
 function startRoom(id){const x=data.find(y=>y.id===id);if(!x)return;const area=$('playArea');area.classList.remove('hidden');$('playTitle').textContent=x.title;$('playLevel').textContent=x.icon+' PHÒNG TẬP · '+x.level;$('playProgress').style.width='30%';$('playBody').innerHTML=`<div class="chat"><div class="sender"><span>${x.sender}</span><span>● GIẢ LẬP</span></div><div class="bubble">${x.msg}</div></div><b>Bạn sẽ xử lý thế nào?</b><div class="choices">${x.opts.map((o,i)=>`<button class="choice" data-o="${i}"><span class="letter">${String.fromCharCode(65+i)}</span><span>${o}</span></button>`).join('')}</div>`;$('playFeedback').classList.add('hidden');$('nextPlay').classList.add('hidden');$('playBody').querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>answerRoom(x,+b.dataset.o));area.scrollIntoView({behavior:'smooth',block:'start'})}
@@ -29,7 +88,70 @@ function report(){const el=$('history');if(!el)return;const a=Object.values(getR
 function downloadCSV(){const a=Object.values(getResults());if(!a.length){alert('Chưa có kết quả để tải.');return}const rows=[['Tình huống','Kỹ năng','Điểm','Lựa chọn','Thời gian'],...a.map(x=>[x.title,x.skill,x.points,x.choice,x.date])];const csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\n');const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));link.download='safeclick-bao-cao-demo.csv';link.click();URL.revokeObjectURL(link.href)}
 function authMessage(t,c){if(!$('authMsg'))return;$('authMsg').className='feedback '+c;$('authMsg').textContent=t;$('authMsg').classList.remove('hidden')}
 let mode='login';function setMode(m){mode=m;if(!$('loginTab'))return;$('loginTab').classList.toggle('primary',m==='login');$('registerTab').classList.toggle('primary',m==='register');$('authSubmit').textContent=m==='login'?'Đăng nhập với Firebase':'Đăng ký tài khoản Firebase';$('authMsg').classList.add('hidden')}
-if(window.firebase){firebase.auth().onAuthStateChanged(user=>{if($('userBadge'))$('userBadge').textContent=user?(user.email||user.displayName||'Đã đăng nhập'):'Khách trải nghiệm';if($('welcome'))$('welcome').textContent=user?'Chào mừng, '+(user.displayName||user.email):'Chào mừng bạn!';if($('authBtn'))$('authBtn').textContent=user?'Tài khoản':'Đăng nhập';if($('authForm'))$('authForm').classList.toggle('hidden',!!user);if($('googleLogin'))$('googleLogin').classList.toggle('hidden',!!user);if($('logout'))$('logout').classList.toggle('hidden',!user)})}
-if($('loginTab'))$('loginTab').onclick=()=>setMode('login');if($('registerTab'))$('registerTab').onclick=()=>setMode('register');if($('authForm'))$('authForm').onsubmit=e=>{e.preventDefault();const email=$('email').value.trim(),password=$('pin').value;const task=mode==='register'?firebase.auth().createUserWithEmailAndPassword(email,password):firebase.auth().signInWithEmailAndPassword(email,password);task.then(()=>{authMessage(mode==='register'?'Đăng ký thành công!':'Đăng nhập thành công!','good');$('pin').value=''}).catch(err=>authMessage('Lỗi: '+err.message,'bad'))};if($('googleLogin'))$('googleLogin').onclick=async()=>{try{const p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});await firebase.auth().signInWithPopup(p);authMessage('Đăng nhập Google thành công!','good')}catch(err){const m={'auth/unauthorized-domain':'Tên miền website chưa có trong Firebase Authentication → Settings → Authorized domains.','auth/operation-not-allowed':'Chưa bật Google trong Firebase Authentication → Sign-in method.','auth/popup-blocked':'Trình duyệt chặn cửa sổ đăng nhập. Hãy cho phép cửa sổ bật lên rồi thử lại.'};authMessage(m[err.code]||('Lỗi Google: '+err.message),'bad')}};if($('logout'))$('logout').onclick=()=>firebase.auth().signOut().then(()=>authMessage('Đã đăng xuất tài khoản Firebase.','good'));
-if($('exitPlay'))$('exitPlay').onclick=()=>{$('playArea').classList.add('hidden');window.scrollTo({top:0,behavior:'smooth'})};if($('nextPlay'))$('nextPlay').onclick=()=>{$('playArea').classList.add('hidden');window.scrollTo({top:0,behavior:'smooth'})};if($('answer'))$('answer').onclick=()=>handleCall(true);if($('decline'))$('decline').onclick=()=>handleCall(false);if($('newCall'))$('newCall').onclick=resetCall;if($('downloadCSV'))$('downloadCSV').onclick=downloadCSV;if($('resetResults'))$('resetResults').onclick=()=>{if(confirm('Xóa toàn bộ kết quả demo trên trình duyệt này?')){localStorage.removeItem('safeclickResults');report();updateHome()}};
+if(window.firebase){
+  firebase.auth().onAuthStateChanged(async user=>{
+    currentUser=user||null;
+    if($('userBadge'))$('userBadge').textContent=user?(user.email||user.displayName||'Đã đăng nhập'):'Khách trải nghiệm';
+    if($('welcome'))$('welcome').textContent=user?'Chào mừng, '+(user.displayName||user.email):'Chào mừng bạn!';
+    if($('authBtn'))$('authBtn').textContent=user?'Tài khoản':'Đăng nhập';
+    if($('authForm'))$('authForm').classList.toggle('hidden',!!user);
+    if($('googleLogin'))$('googleLogin').classList.toggle('hidden',!!user);
+    if($('logout'))$('logout').classList.toggle('hidden',!user);
+    if($('resetPassword'))$('resetPassword').classList.toggle('hidden',!!user);
+    if(user){
+      if($('profileEmail'))$('profileEmail').textContent=user.email||user.displayName||'Đã đăng nhập bằng Google';
+      if($('profileProvider'))$('profileProvider').textContent=(user.providerData||[]).map(p=>p.providerId==='google.com'?'Google':p.providerId==='password'?'Email và mật khẩu':p.providerId).join(', ')||'Firebase Authentication';
+      await loadResultsFromCloud(user);
+    } else {
+      cloudSyncReady=false;
+      if($('profileEmail'))$('profileEmail').textContent='Chưa đăng nhập';
+      if($('profileProvider'))$('profileProvider').textContent='Khách trải nghiệm';
+      if($('syncStatus')){$('syncStatus').textContent='Kết quả khách được lưu trên thiết bị này. Đăng nhập để đồng bộ kết quả riêng của tài khoản.';$('syncStatus').className='notice';}
+      renderRooms();updateHome();report();
+    }
+  });
+}
+if($('loginTab'))$('loginTab').onclick=()=>setMode('login');
+if($('registerTab'))$('registerTab').onclick=()=>setMode('register');
+if($('authForm'))$('authForm').onsubmit=async e=>{
+  e.preventDefault();
+  const email=$('email').value.trim(),password=$('pin').value;
+  const submit=$('authSubmit');if(submit)submit.disabled=true;
+  try {
+    if(!window.firebase)throw new Error('Firebase chưa được tải. Hãy tải lại trang.');
+    if(mode==='register'){
+      const cred=await firebase.auth().createUserWithEmailAndPassword(email,password);
+      try{await cred.user.sendEmailVerification();authMessage('Đăng ký thành công! Firebase đã gửi email xác minh nếu dịch vụ email được bật.','good');}
+      catch{authMessage('Đăng ký thành công. Có thể đăng nhập; chưa gửi được email xác minh.','good');}
+    } else {
+      await firebase.auth().signInWithEmailAndPassword(email,password);
+      authMessage('Đăng nhập thành công! Đang tải dữ liệu luyện tập của bạn…','good');
+    }
+    $('pin').value='';
+  } catch(err) {
+    const messages={
+      'auth/email-already-in-use':'Email này đã có tài khoản. Hãy chuyển sang Đăng nhập.',
+      'auth/invalid-email':'Địa chỉ email chưa đúng định dạng.',
+      'auth/weak-password':'Mật khẩu quá yếu. Hãy dùng ít nhất 6 ký tự.',
+      'auth/user-not-found':'Không tìm thấy tài khoản này.',
+      'auth/wrong-password':'Mật khẩu chưa đúng.',
+      'auth/invalid-credential':'Email hoặc mật khẩu chưa đúng.',
+      'auth/too-many-requests':'Có quá nhiều lần thử. Hãy chờ một lúc rồi thử lại.',
+      'auth/operation-not-allowed':'Chưa bật phương thức Email/Mật khẩu trong Firebase Authentication.'
+    };
+    authMessage(messages[err.code]||('Không thực hiện được: '+err.message),'bad');
+  } finally {if(submit)submit.disabled=false;}
+};
+if($('resetPassword'))$('resetPassword').onclick=async()=>{
+  const email=$('email')?.value.trim();
+  if(!email){authMessage('Nhập email vào ô phía trên trước, rồi bấm Quên mật khẩu.','bad');return;}
+  try{await firebase.auth().sendPasswordResetEmail(email);authMessage('Đã yêu cầu gửi email đặt lại mật khẩu. Kiểm tra cả thư mục Spam.','good');}
+  catch(err){authMessage(err.code==='auth/user-not-found'?'Không tìm thấy tài khoản với email này.':'Chưa gửi được email đặt lại mật khẩu: '+err.message,'bad');}
+};
+if($('googleLogin'))$('googleLogin').onclick=async()=>{
+  try{const p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});await firebase.auth().signInWithPopup(p);authMessage('Đăng nhập Google thành công!','good');}
+  catch(err){const m={'auth/unauthorized-domain':'Tên miền website chưa có trong Firebase Authentication → Settings → Authorized domains.','auth/operation-not-allowed':'Chưa bật Google trong Firebase Authentication → Sign-in method.','auth/popup-blocked':'Trình duyệt chặn cửa sổ đăng nhập. Hãy cho phép cửa sổ bật lên rồi thử lại.'};authMessage(m[err.code]||('Lỗi Google: '+err.message),'bad');}
+};
+if($('logout'))$('logout').onclick=()=>firebase.auth().signOut().then(()=>authMessage('Đã đăng xuất. Dữ liệu tài khoản vẫn được lưu trên Firebase.','good')).catch(err=>authMessage('Chưa đăng xuất được: '+err.message,'bad'));
+if($('exitPlay'))$('exitPlay').onclick=()=>{$('playArea').classList.add('hidden');window.scrollTo({top:0,behavior:'smooth'})};if($('nextPlay'))$('nextPlay').onclick=()=>{$('playArea').classList.add('hidden');window.scrollTo({top:0,behavior:'smooth'})};if($('answer'))$('answer').onclick=()=>handleCall(true);if($('decline'))$('decline').onclick=()=>handleCall(false);if($('newCall'))$('newCall').onclick=resetCall;if($('downloadCSV'))$('downloadCSV').onclick=downloadCSV;if($('resetResults'))$('resetResults').onclick=()=>{if(confirm(currentUser?'Xóa kết quả luyện tập của tài khoản này khỏi Firebase và thiết bị?':'Xóa kết quả khách trên thiết bị này?')){if(currentUser && window.firebase && firebase.firestore){firebase.firestore().collection('users').doc(currentUser.uid).collection('progress').doc('main').delete().then(()=>{localStorage.setItem(resultStorageKey(),'{}');report();updateHome();renderRooms();setSyncStatus('Đã xóa kết quả luyện tập của tài khoản.','good')}).catch(()=>alert('Không xóa được dữ liệu trên Firebase. Kiểm tra Firestore Rules.'))}else{localStorage.removeItem('safeclickResultsGuest');localStorage.removeItem('safeclickResults');report();updateHome();renderRooms()}}};
 renderRooms();updateHome();report();if($('caller')){callI=-1;resetCall()}
