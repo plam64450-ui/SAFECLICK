@@ -17,6 +17,7 @@ const calls=[
 ];
 // Kết quả được tách theo tài khoản để tránh người dùng chung máy xem nhầm dữ liệu.
 let currentUser = null;
+let authReady = false;;
 let cloudSyncReady = false;
 function resultStorageKey(){return currentUser ? `safeclickResults_${currentUser.uid}` : 'safeclickResultsGuest'}
 function isPlainObject(value){
@@ -149,8 +150,9 @@ function downloadCSV(){const a=Object.values(getResults());if(!a.length){alert('
 function authMessage(t,c){if(!$('authMsg'))return;$('authMsg').className='feedback '+c;$('authMsg').textContent=t;$('authMsg').classList.remove('hidden')}
 let mode='login';function setMode(m){mode=m;if(!$('loginTab'))return;$('loginTab').classList.toggle('primary',m==='login');$('registerTab').classList.toggle('primary',m==='register');$('authSubmit').textContent=m==='login'?'Đăng nhập với Firebase':'Đăng ký tài khoản Firebase';$('authMsg').classList.add('hidden')}
 if(window.firebase){
-  firebase.auth().onAuthStateChanged(async user=>{
-    currentUser=user||null;
+firebase.auth().onAuthStateChanged(async user=>{
+    currentUser = user || null;
+    authReady = true;
     if($('userBadge'))$('userBadge').textContent=user?(user.email||user.displayName||'Đã đăng nhập'):'Khách trải nghiệm';
     if($('welcome'))$('welcome').textContent=user?'Chào mừng, '+(user.displayName||user.email):'Chào mừng bạn!';
     if($('authBtn'))$('authBtn').textContent=user?'Tài khoản':'Đăng nhập';
