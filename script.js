@@ -158,6 +158,8 @@ if(window.firebase){
     if($('authBtn'))$('authBtn').textContent=user?'Tài khoản':'Đăng nhập';
     if($('authForm'))$('authForm').classList.toggle('hidden',!!user);
     document.querySelector('.tabs')?.classList.toggle('hidden', !!user);
+    if ($('loginTab')) $('loginTab').classList.toggle('hidden', !!user);
+if ($('registerTab')) $('registerTab').classList.toggle('hidden', !!user);
     if($('googleLogin'))$('googleLogin').classList.toggle('hidden',!!user);
     if($('logout'))$('logout').classList.toggle('hidden',!user);
     if($('resetPassword'))$('resetPassword').classList.toggle('hidden',!!user);
