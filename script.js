@@ -17,7 +17,6 @@ const calls=[
 ];
 // Kết quả được tách theo tài khoản để tránh người dùng chung máy xem nhầm dữ liệu.
 let currentUser = null;
-let authReady = false;;
 let cloudSyncReady = false;
 function resultStorageKey(){return currentUser ? `safeclickResults_${currentUser.uid}` : 'safeclickResultsGuest'}
 function isPlainObject(value){
@@ -150,10 +149,11 @@ function downloadCSV(){const a=Object.values(getResults());if(!a.length){alert('
 function authMessage(t,c){if(!$('authMsg'))return;$('authMsg').className='feedback '+c;$('authMsg').textContent=t;$('authMsg').classList.remove('hidden')}
 let mode='login';function setMode(m){mode=m;if(!$('loginTab'))return;$('loginTab').classList.toggle('primary',m==='login');$('registerTab').classList.toggle('primary',m==='register');$('authSubmit').textContent=m==='login'?'Đăng nhập với Firebase':'Đăng ký tài khoản Firebase';$('authMsg').classList.add('hidden')}
 if(window.firebase){
-firebase.auth().onAuthStateChanged(async user=>{
-    currentUser = user || null;
-    authReady = true;
-if($('userBadge'))$('userBadge').textContent=!authReady?'Đang tải tài khoản…':user?(user.email||user.displayName||'Đã đăng nhập'):'Khách trải nghiệm';
+  firebase.auth().onAuthStateChanged(async user=>{
+    currentUser=user||null;
+    setProfileEditorVisible(user);
+    if(user) loadProfile(user);
+    if($('userBadge'))$('userBadge').textContent=user?(user.email||user.displayName||'Đã đăng nhập'):'Khách trải nghiệm';
     if($('welcome'))$('welcome').textContent=user?'Chào mừng, '+(user.displayName||user.email):'Chào mừng bạn!';
     if($('authBtn'))$('authBtn').textContent=user?'Tài khoản':'Đăng nhập';
     if($('authForm'))$('authForm').classList.toggle('hidden',!!user);
@@ -217,3 +217,113 @@ if($('googleLogin'))$('googleLogin').onclick=async()=>{
 if($('logout'))$('logout').onclick=()=>firebase.auth().signOut().then(()=>authMessage('Đã đăng xuất. Dữ liệu tài khoản vẫn được lưu trên Firebase.','good')).catch(err=>authMessage('Chưa đăng xuất được: '+err.message,'bad'));
 if($('exitPlay'))$('exitPlay').onclick=()=>{$('playArea').classList.add('hidden');window.scrollTo({top:0,behavior:'smooth'})};if($('nextPlay'))$('nextPlay').onclick=()=>{$('playArea').classList.add('hidden');window.scrollTo({top:0,behavior:'smooth'})};if($('answer'))$('answer').onclick=()=>handleCall(true);if($('decline'))$('decline').onclick=()=>handleCall(false);if($('newCall'))$('newCall').onclick=resetCall;if($('downloadCSV'))$('downloadCSV').onclick=downloadCSV;if($('resetResults'))$('resetResults').onclick=()=>{if(confirm(currentUser?'Xóa kết quả luyện tập của tài khoản này khỏi Firebase và thiết bị?':'Xóa kết quả khách trên thiết bị này?')){if(currentUser && window.firebase && firebase.firestore){firebase.firestore().collection('users').doc(currentUser.uid).collection('progress').doc('main').delete().then(()=>{localStorage.setItem(resultStorageKey(),'{}');report();updateHome();renderRooms();setSyncStatus('Đã xóa kết quả luyện tập của tài khoản.','good')}).catch(()=>alert('Không xóa được dữ liệu trên Firebase. Kiểm tra Firestore Rules.'))}else{localStorage.removeItem('safeclickResultsGuest');localStorage.removeItem('safeclickResults');report();updateHome();renderRooms()}}};
 renderRooms();updateHome();report();if($('caller')){callI=-1;resetCall()}
+
+
+// --- SAFECLICK: quản lý hồ sơ người dùng ---
+const defaultAvatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='50' fill='%23e6eefb'/%3E%3Ccircle cx='50' cy='36' r='18' fill='%236b86b5'/%3E%3Cpath d='M17 91c2-22 15-34 33-34s31 12 33 34' fill='%236b86b5'/%3E%3C/svg%3E";
+let selectedAvatarData = null;
+let profileLoadedUid = null;
+function profileMessage(id, message, kind=''){
+  const el=$(id); if(!el)return;
+  el.textContent=message; el.className='feedback '+kind; el.classList.remove('hidden');
+}
+function setProfileEditorVisible(user){
+  const editor=$('profileEditor'); if(editor)editor.classList.toggle('hidden',!user);
+  const summary=document.querySelector('.profile-summary'); if(summary)summary.classList.toggle('hidden',!user);
+}
+function compressAvatar(file){
+  return new Promise((resolve,reject)=>{
+    if(!file || !/^image\/(jpeg|png|webp)$/.test(file.type)){reject(new Error('Hãy chọn ảnh JPG, PNG hoặc WebP.'));return;}
+    if(file.size>5*1024*1024){reject(new Error('Ảnh gốc phải nhỏ hơn 5 MB.'));return;}
+    const reader=new FileReader();
+    reader.onerror=()=>reject(new Error('Không đọc được ảnh.'));
+    reader.onload=()=>{
+      const img=new Image();
+      img.onerror=()=>reject(new Error('Tệp ảnh không hợp lệ.'));
+      img.onload=()=>{
+        const canvas=document.createElement('canvas');
+        const scale=Math.min(1,400/Math.max(img.width,img.height));
+        canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));
+        const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        let data=canvas.toDataURL('image/jpeg',0.78);
+        if(data.length>350000)data=canvas.toDataURL('image/jpeg',0.55);
+        if(data.length>450000){reject(new Error('Ảnh vẫn quá lớn sau khi nén. Hãy chọn ảnh khác.'));return;}
+        resolve(data);
+      };
+      img.src=reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+async function loadProfile(user){
+  if(!user || !window.firebase || !firebase.firestore)return;
+  profileLoadedUid=user.uid;selectedAvatarData=user.photoURL||null;
+  if($('displayNameInput'))$('displayNameInput').value=user.displayName||'';
+  if($('profileUid'))$('profileUid').value=user.uid;
+  if($('profileAvatar'))$('profileAvatar').src=user.photoURL||defaultAvatar;
+  if($('profilePhone'))$('profilePhone').value='';
+  try{
+    const snap=await firebase.firestore().collection('users').doc(user.uid).collection('profile').doc('main').get();
+    if(!currentUser || currentUser.uid!==user.uid)return;
+    if(snap.exists){
+      const data=snap.data()||{};
+      if($('profilePhone'))$('profilePhone').value=String(data.phone||'').slice(0,25);
+      if(data.avatarData){selectedAvatarData=data.avatarData;if($('profileAvatar'))$('profileAvatar').src=data.avatarData;}
+      if(data.displayName && !$('displayNameInput').value)$('displayNameInput').value=data.displayName;
+    }
+  }catch(err){console.warn('Không tải được hồ sơ phụ:',err);}
+}
+if($('avatarFile'))$('avatarFile').addEventListener('change',async e=>{
+  const file=e.target.files&&e.target.files[0];if(!file)return;
+  try{selectedAvatarData=await compressAvatar(file);if($('profileAvatar'))$('profileAvatar').src=selectedAvatarData;profileMessage('profileMsg','Ảnh đã chọn. Nhấn “Lưu hồ sơ” để lưu.','good');}
+  catch(err){profileMessage('profileMsg',err.message,'bad');}
+});
+if($('removeAvatar'))$('removeAvatar').onclick=()=>{selectedAvatarData='';if($('profileAvatar'))$('profileAvatar').src=defaultAvatar;profileMessage('profileMsg','Đã chọn ảnh mặc định. Nhấn “Lưu hồ sơ” để áp dụng.','');};
+if($('copyUid'))$('copyUid').onclick=async()=>{
+  const value=$('profileUid')?.value||'';if(!value)return;
+  try{await navigator.clipboard.writeText(value);profileMessage('profileMsg','Đã sao chép ID người dùng.','good');}
+  catch{const input=$('profileUid');input.select();profileMessage('profileMsg','ID đã được chọn; nhấn Ctrl+C để sao chép.','');}
+};
+if($('saveProfile'))$('saveProfile').onclick=async()=>{
+  const user=currentUser;if(!user){profileMessage('profileMsg','Hãy đăng nhập trước.','bad');return;}
+  const name=$('displayNameInput').value.trim().slice(0,60);
+  const phone=$('profilePhone').value.trim().slice(0,25);
+  if(phone && !/^[+()\d\s.-]{7,25}$/.test(phone)){profileMessage('profileMsg','Số điện thoại chưa đúng định dạng.','bad');return;}
+  const btn=$('saveProfile');btn.disabled=true;
+  try{
+    const update={displayName:name||null};
+    if(selectedAvatarData)update.photoURL=selectedAvatarData;
+    else if(selectedAvatarData==='')update.photoURL=null;
+    await user.updateProfile(update);
+    await firebase.firestore().collection('users').doc(user.uid).collection('profile').doc('main').set({
+      displayName:name,phone,
+      avatarData:selectedAvatarData===null?(user.photoURL||''):selectedAvatarData,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    },{merge:true});
+    if($('userBadge'))$('userBadge').textContent=name||user.email||'Đã đăng nhập';
+    if($('welcome'))$('welcome').textContent='Chào mừng, '+(name||user.email||'bạn');
+    profileMessage('profileMsg','Đã lưu hồ sơ thành công. Số điện thoại hiện chưa được xác minh OTP.','good');
+  }catch(err){
+    console.error('Lưu hồ sơ thất bại:',err);
+    profileMessage('profileMsg','Chưa lưu được hồ sơ. Kiểm tra kết nối và Firestore Rules rồi thử lại.','bad');
+  }finally{btn.disabled=false;}
+};
+if($('passwordForm'))$('passwordForm').onsubmit=async e=>{
+  e.preventDefault();const user=currentUser;
+  if(!user){profileMessage('passwordMsg','Hãy đăng nhập trước.','bad');return;}
+  const providers=(user.providerData||[]).map(p=>p.providerId);
+  if(!providers.includes('password')){profileMessage('passwordMsg','Tài khoản này dùng Google hoặc nhà cung cấp khác. Hãy đổi mật khẩu tại nhà cung cấp đó.','bad');return;}
+  const current=$('currentPassword').value,newPass=$('newPassword').value,confirmPass=$('confirmPassword').value;
+  if(newPass.length<6){profileMessage('passwordMsg','Mật khẩu mới cần ít nhất 6 ký tự.','bad');return;}
+  if(newPass!==confirmPass){profileMessage('passwordMsg','Hai mật khẩu mới không khớp.','bad');return;}
+  const btn=$('changePassword');btn.disabled=true;
+  try{
+    const credential=firebase.auth.EmailAuthProvider.credential(user.email,current);
+    await user.reauthenticateWithCredential(credential);
+    await user.updatePassword(newPass);
+    $('passwordForm').reset();profileMessage('passwordMsg','Đổi mật khẩu thành công.','good');
+  }catch(err){
+    const msg=err.code==='auth/wrong-password'||err.code==='auth/invalid-credential'?'Mật khẩu hiện tại chưa đúng.':err.code==='auth/requires-recent-login'?'Hãy đăng nhập lại rồi thử đổi mật khẩu.':'Chưa đổi được mật khẩu: '+(err.message||'lỗi không xác định');
+    profileMessage('passwordMsg',msg,'bad');
+  }finally{btn.disabled=false;}
+};
