@@ -295,9 +295,7 @@ if($('saveProfile'))$('saveProfile').onclick=async()=>{
   const btn=$('saveProfile');btn.disabled=true;
   try{
     const update={displayName:name||null};
-    if(selectedAvatarData)update.photoURL=selectedAvatarData;
-    else if(selectedAvatarData==='')update.photoURL=null;
-    await user.updateProfile(update);
+  await user.updateProfile({displayName:name||null});
     await firebase.firestore().collection('users').doc(user.uid).collection('profile').doc('main').set({
       displayName:name,phone,
       avatarData:selectedAvatarData===null?(user.photoURL||''):selectedAvatarData,
