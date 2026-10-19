@@ -308,7 +308,8 @@ if($('saveProfile'))$('saveProfile').onclick=async()=>{
     profileMessage('profileMsg','Đã lưu hồ sơ thành công. Số điện thoại hiện chưa được xác minh OTP.','good');
   }catch(err){
     console.error('Lưu hồ sơ thất bại:',err);
-    profileMessage('profileMsg','Chưa lưu được hồ sơ. Kiểm tra kết nối và Firestore Rules rồi thử lại.','bad');
+ const code = err?.code || '';
+profileMessage('profileMsg', 'Lỗi lưu hồ sơ: ' + (err?.message || code || 'Không rõ nguyên nhân') + (code ? ' [' + code + ']' : ''), 'bad');
   }finally{btn.disabled=false;}
 };
 if($('passwordForm'))$('passwordForm').onsubmit=async e=>{
