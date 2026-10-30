@@ -4,7 +4,11 @@ const NEWS_API = "https://safeclick-news.plam64450.workers.dev/";
 const newsState = { items: [], filter: "all", query: "" };
 const $news = id => document.getElementById(id);
 
-function safeDate(value) {
+function decodeHtmlEntities(value) {
+  const textarea = document.createElement("textarea");
+  textarea.innerHTML = String(value || "");
+  return textarea.value;
+}
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? "Chưa rõ ngày" : d.toLocaleDateString("vi-VN", {day:"2-digit",month:"2-digit",year:"numeric"});
 }
@@ -40,8 +44,8 @@ function renderNews() {
     const category = document.createElement("span"); category.className = "news-category"; category.textContent = categoryFor(item);
     const date = document.createElement("time"); date.className = "news-date"; date.textContent = safeDate(item.pubDate);
     top.append(category,date);
-    const title = document.createElement("h3"); title.textContent = item.title || "Tin cảnh báo";
-    const desc = document.createElement("p"); desc.textContent = item.description || "Mở bài gốc để đọc thông tin chi tiết từ nguồn đăng tải.";
+    const title = document.createElement("h3"); title.textContent = decodeHtmlEntities(item.title || "Tin cảnh báo");
+    const desc = document.createElement("p"); desc.textContent = decodeHtmlEntities(item.description || "Mở bài gốc để đọc thông tin chi tiết từ nguồn đăng tải.");
     const source = document.createElement("div"); source.className = "news-source";
     const mark = document.createElement("span"); mark.className = "source-mark"; mark.textContent = (item.source || "SC").trim().slice(0,2).toUpperCase();
     const sourceName = document.createElement("span"); sourceName.textContent = item.source || "Nguồn tin"; source.append(mark,sourceName);
