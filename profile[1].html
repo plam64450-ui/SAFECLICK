@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Đổi thông tin · SAFECLICK</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+<a class="brand" href="index.html"><div class="logo">✓</div><div><h1>SAFECLICK</h1><p>PHÒNG TẬP PHẢN XẠ AN TOÀN SỐ</p></div></a>
+<span id="userBadge" class="small">Đang kiểm tra tài khoản…</span><a id="authBtn" class="button ghost" href="account.html">Tài khoản</a></div>
+</header>
+<nav class="nav">
+<a class="button" href="index.html">Tổng quan</a><a class="button" href="practice.html">Phòng Tập Kĩ Năng</a><a class="button" href="calls.html">Cuộc gọi mô phỏng</a><a class="button" href="report.html">Báo cáo kết quả</a><a class="button active" href="account.html">Tài khoản</a>
+</nav>
+
+<section class="panel auth">
+<div class="eyebrow">HỒ SƠ TRẢI NGHIỆM</div>
+<h2>Tài khoản SAFECLICK</h2>
+<p class="small">Quản lý hồ sơ, thông tin liên hệ và bảo mật tài khoản của bạn.</p>
+
+<form id="authForm" class="hidden">
+<div class="field"><label for="email">Địa chỉ Email</label><input id="email" type="email" placeholder="example@email.com" required autocomplete="email"></div>
+<div class="field"><label for="pin">Mật khẩu</label><input id="pin" type="password" minlength="6" placeholder="Tối thiểu 6 ký tự" required autocomplete="current-password"></div>
+<button id="authSubmit" class="primary" style="width:100%">Đăng nhập với Firebase</button>
+</form>
+<button id="googleLogin" class="hidden" style="width:100%;margin-top:10px" type="button">🌐 Tiếp tục với Google</button>
+<button id="resetPassword" class="hidden "ghost" type="button" style="width:100%;margin-top:8px">Quên mật khẩu?</button>
+<div id="authMsg" class="feedback hidden" role="status"></div>
+
+
+
+<section id="profileEditor" class="profile-editor" aria-labelledby="profileHeading">
+<div class="profile-heading">
+<div class="avatar-wrap"><img id="profileAvatar" alt="Ảnh hồ sơ" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='50' fill='%23e6eefb'/%3E%3Ccircle cx='50' cy='36' r='18' fill='%236b86b5'/%3E%3Cpath d='M17 91c2-22 15-34 33-34s31 12 33 34' fill='%236b86b5'/%3E%3C/svg%3E">
+</div>
+<div class="profile-heading-text"><div class="eyebrow">HỒ SƠ CỦA BẠN</div><h3 id="profileHeading">Thông tin cá nhân</h3><p class="small">Ảnh JPG, PNG hoặc WebP; tối đa 5 MB trước khi xử lý.</p></div>
+</div>
+<div class="profile-actions">
+<label class="button ghost file-button" for="avatarFile">📷 Chọn ảnh hồ sơ</label>
+<input id="avatarFile" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+<button id="removeAvatar" type="button" class="ghost">Dùng ảnh mặc định</button>
+</div>
+<div class="field"><label for="displayNameInput">Tên hiển thị</label><input id="displayNameInput" type="text" maxlength="60" placeholder="Tên bạn muốn mọi người thấy" autocomplete="name"></div>
+<div class="field"><label for="publicIdInput"><span class="setting-icon">@</span> ID tự đặt (ví dụ: dl.ma)</label><input id="publicIdInput" type="text" maxlength="24" placeholder="dl.ma" autocomplete="nickname"><p class="small">ID tự đặt hiện được lưu trong hồ sơ; để đảm bảo không trùng toàn hệ thống cần thêm kiểm tra duy nhất bằng Firestore Rules/transaction.</p></div>
+<div class="field"><label>ID tài khoản Firebase (không thể tự đổi)</label><div class="id-row"><input id="profileUid" type="text" readonly><button id="copyUid" type="button" class="ghost">Sao chép ID</button></div></div>
+<div class="field"><label for="profilePhone">Số điện thoại</label><input id="profilePhone" type="tel" maxlength="25" placeholder="Ví dụ: 09xxxxxxxx" autocomplete="tel"><p class="small">Số điện thoại lưu trong hồ sơ, chưa được xác minh bằng OTP.</p></div>
+<button id="saveProfile" class="primary" type="button" style="width:100%">Lưu hồ sơ</button>
+<div id="profileMsg" class="feedback hidden" role="status"></div>
+
+<div class="security-divider"></div>
+<h3><span class="setting-icon">✉</span> Thay đổi email</h3>
+<p class="small">Firebase có thể yêu cầu xác thực lại trước khi đổi email.</p>
+<div class="field"><label for="newEmail">Email mới</label><input id="newEmail" type="email" placeholder="tenmoi@example.com" autocomplete="email"></div>
+<div class="field"><label for="emailCurrentPassword">Mật khẩu hiện tại (nếu đăng nhập bằng email)</label><input id="emailCurrentPassword" type="password" autocomplete="current-password"></div>
+<button id="changeEmail" class="primary" type="button">Cập nhật email</button><div id="emailMsg" class="feedback hidden" role="status"></div>
+<div class="security-divider"></div>
+<h3>🔐 Đổi mật khẩu</h3>
+<p class="small">Chỉ áp dụng với tài khoản đăng nhập bằng email và mật khẩu. Tài khoản Google quản lý mật khẩu trong Google.</p>
+<form id="passwordForm">
+<div class="field"><label for="currentPassword">Mật khẩu hiện tại</label><input id="currentPassword" type="password" autocomplete="current-password" minlength="6"></div>
+<div class="field"><label for="newPassword">Mật khẩu mới</label><input id="newPassword" type="password" autocomplete="new-password" minlength="6"></div>
+<div class="field"><label for="confirmPassword">Nhập lại mật khẩu mới</label><input id="confirmPassword" type="password" autocomplete="new-password" minlength="6"></div>
+<button id="changePassword" class="primary" type="submit" style="width:100%">Cập nhật mật khẩu</button>
+</form>
+<div id="passwordMsg" class="feedback hidden" role="status"></div>
+</section>
+
+<a class="button ghost" href="account.html">← Quay lại tài khoản</a>
+<div class="panel profile-summary" style="margin-top:14px;padding:13px">
+<h3>Trạng thái tài khoản</h3><p class="small">Email: <b id="profileEmail">Chưa đăng nhập</b></p><p class="small">Phương thức: <b id="profileProvider">Khách trải nghiệm</b></p><div id="syncStatus" class="notice">Đang kiểm tra tài khoản…</div></div>
+<button id="logout" class="ghost hidden" type="button" style="width:100%;margin-top:10px">Thoát tài khoản</button>
+<div class="notice" style="margin-top:14px">Không chia sẻ mật khẩu hoặc mã xác minh với người khác. Số điện thoại trong hồ sơ chưa được xác minh nếu chưa thực hiện quy trình OTP.</div>
+</section>
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <section class="footer-about">
+      <a class="footer-brand" href="index.html"><span class="footer-logo">✓</span><span><strong>SAFECLICK</strong><small>PHÒNG TẬP PHẢN XẠ AN TOÀN SỐ</small></span></a>
+      <h3>Về SAFECLICK</h3>
+      <p>SAFECLICK là mô hình huấn luyện kỹ năng an toàn số thông qua các tình huống lừa đảo trực tuyến giả lập có tính tương tác. Thay vì chỉ cung cấp kiến thức hoặc yêu cầu người dùng phân biệt tin nhắn thật – giả, hệ thống cho phép người chơi lựa chọn cách xử lý, theo dõi diễn biến giả lập và nhận giải thích về mức độ an toàn của từng quyết định.</p>
+    </section>
+    <section class="footer-contact">
+      <h3>Liên hệ</h3>
+      <p class="footer-intro">Nếu bạn có câu hỏi hoặc cần được hỗ trợ, đừng ngần ngại liên hệ với chúng tôi qua các kênh thông tin bên dưới. Đội ngũ hỗ trợ khách hàng sẽ phản hồi bạn nhanh nhất có thể.</p>
+      <ul>
+        <li><span class="footer-icon" aria-hidden="true">📍</span><span><b>Địa chỉ</b>Liên Châu, Yên Lạc, Phú Thọ, Việt Nam</span></li>
+        <li><span class="footer-icon" aria-hidden="true">☎</span><span><b>Hotline</b><a href="tel:0339611210">0339 611 210</a></span></li>
+        <li><span class="footer-icon" aria-hidden="true">✉</span><span><b>Email</b><a href="mailto:tyen41253@gmail.com">tyen41253@gmail.com</a></span></li>
+        <li><span class="footer-icon" aria-hidden="true">🌐</span><span><b>Website</b><a href="https://plam64450-ui.github.io/SAFECLICK/" target="_blank" rel="noopener noreferrer">plam64450-ui.github.io/SAFECLICK/</a></span></li>
+      </ul>
+    </section>
+  </div>
+  <div class="footer-bottom">© SAFECLICK · Mô hình giáo dục kỹ năng an toàn số</div>
+</footer>
+</div>
+<script src="script.js"></script>
+</body></html>

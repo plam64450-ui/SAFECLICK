@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1100" fill="none">
+  <defs>
+    <linearGradient id="shield" x1="210" y1="180" x2="690" y2="850" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#68F4E4"/><stop offset="1" stop-color="#429BFF"/>
+    </linearGradient>
+    <radialGradient id="glow"><stop stop-color="#29BDE7" stop-opacity=".23"/><stop offset="1" stop-color="#29BDE7" stop-opacity="0"/></radialGradient>
+  </defs>
+  <ellipse cx="450" cy="510" rx="390" ry="390" fill="url(#glow)"/>
+  <g stroke="url(#shield)" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M450 145 680 235v205c0 174-96 306-230 390-134-84-230-216-230-390V235l230-90Z" stroke-width="13" stroke-opacity=".35"/>
+    <path d="M450 190 638 263v175c0 145-76 255-188 329-112-74-188-184-188-329V263l188-73Z" stroke-width="5" stroke-opacity=".24"/>
+    <path d="m355 442 65 65 128-139" stroke-width="24" stroke-opacity=".31"/>
+    <path d="M450 85V25h-82M450 1015v54h-92M700 310h100v-65h55M700 705h93v63h55M200 310H100v-65H45M200 705h-92v63H45" stroke-width="5" stroke-opacity=".23"/>
+    <path d="M450 25v45M368 25h-45M358 1050h-45M450 1015v52M800 245h45M793 768h45M100 245H55M108 768H55" stroke-width="3" stroke-opacity=".32"/>
+    <path d="M220 380h-70v-65h-45M680 380h70v-65h45M220 640h-70v65h-45M680 640h70v65h45" stroke-width="4" stroke-opacity=".2"/>
+    <circle cx="323" cy="25" r="8" fill="#68F4E4" fill-opacity=".35" stroke="none"/><circle cx="313" cy="1050" r="8" fill="#68F4E4" fill-opacity=".35" stroke="none"/><circle cx="845" cy="245" r="8" fill="#68F4E4" fill-opacity=".35" stroke="none"/><circle cx="845" cy="768" r="8" fill="#68F4E4" fill-opacity=".35" stroke="none"/><circle cx="55" cy="245" r="8" fill="#68F4E4" fill-opacity=".35" stroke="none"/><circle cx="55" cy="768" r="8" fill="#68F4E4" fill-opacity=".35" stroke="none"/>
+  </g>
+</svg>
