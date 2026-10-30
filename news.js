@@ -6,8 +6,17 @@ const $news = id => document.getElementById(id);
 
 function decodeHtmlEntities(value) {
   const textarea = document.createElement("textarea");
-  textarea.innerHTML = String(value || "");
-  return textarea.value;
+  let result = String(value || "");
+
+  for (let i = 0; i < 4; i++) {
+    textarea.innerHTML = result;
+    const decoded = textarea.value;
+
+    if (decoded === result) break;
+    result = decoded;
+  }
+
+  return result;
 }
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? "Chưa rõ ngày" : d.toLocaleDateString("vi-VN", {day:"2-digit",month:"2-digit",year:"numeric"});
