@@ -1,6 +1,6 @@
 // SAFECLICK News UI — kết nối Worker RSS tại NEWS_API
 // Thay URL bên dưới bằng URL Worker tin tức đã Deploy.
-const NEWS_API = "https://YOUR-NEWS-WORKER.workers.dev/";
+const NEWS_API = "https://safeclick-news.plam64450.workers.dev/";
 const newsState = { items: [], filter: "all", query: "" };
 const $news = id => document.getElementById(id);
 
