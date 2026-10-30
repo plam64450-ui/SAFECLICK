@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#071321">
+  <title>Tin cảnh báo · SAFECLICK</title>
+  <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="news.css">
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><a class="brand" href="index.html"><div class="logo">✓</div><div><h1>SAFECLICK</h1><p>PHÒNG TẬP PHẢN XẠ AN TOÀN SỐ</p></div></a><div class="actions"><span id="userBadge" class="small">Khách trải nghiệm</span><a id="authBtn" class="button ghost" href="account.html">Đăng nhập</a></div></header>
+  <nav class="nav"><a class="button" href="index.html">Tổng quan</a><a class="button" href="practice.html">Phòng Tập Kĩ Năng</a><a class="button" href="calls.html">Cuộc gọi mô phỏng</a><a class="button" href="report.html">Báo cáo kết quả</a><a class="button active" href="news.html">Tin cảnh báo</a><a class="button" href="account.html">Tài khoản</a></nav>
+
+  <section class="news-hero">
+    <div class="news-hero-copy">
+      <div class="eyebrow"><span class="live-dot"></span> CẬP NHẬT AN TOÀN SỐ</div>
+      <h2>Biết chiêu trò mới.<br><span>Giữ mình an toàn.</span></h2>
+      <p>Tổng hợp cảnh báo về thủ đoạn lừa đảo trực tuyến từ các nguồn tin. Đọc để nhận diện sớm, luyện tập để phản ứng đúng.</p>
+      <div class="news-hero-actions"><a class="button primary" href="#latest-news">Xem tin mới <span aria-hidden="true">↓</span></a><a class="button" href="practice.html">Vào phòng tập ↗</a></div>
+      <div class="news-trust"><span>◉ Nguồn tin được ghi rõ</span><span>↗ Liên kết bài gốc</span><span>⟳ Tải lại khi cần</span></div>
+    </div>
+    <div class="alert-feature">
+      <div class="alert-orbit orbit-one"></div><div class="alert-orbit orbit-two"></div>
+      <div class="alert-shield">⌑</div>
+      <div class="alert-feature-label">NGUYÊN TẮC VÀNG</div>
+      <strong>DỪNG LẠI<br>TRƯỚC KHI<br>NHẤN VÀO LINK</strong>
+      <p>Không vội cung cấp OTP, mật khẩu hay thông tin cá nhân.</p>
+      <span class="feature-foot">DỪNG LẠI · KIỂM TRA · XÁC MINH</span>
+    </div>
+  </section>
+
+  <section class="news-stats" aria-label="Thông tin cập nhật">
+    <div class="news-stat"><span class="stat-icon">◷</span><div><b id="news-count">—</b><small>Tin phù hợp</small></div></div>
+    <div class="news-stat"><span class="stat-icon">⌁</span><div><b id="source-count">—</b><small>Nguồn tin</small></div></div>
+    <div class="news-stat"><span class="stat-icon">⟳</span><div><b id="updated-at">Chưa tải</b><small>Lần cập nhật gần nhất</small></div></div>
+  </section>
+
+  <section class="news-section" id="latest-news">
+    <div class="section-heading"><div><div class="eyebrow">THEO DÕI DIỄN BIẾN</div><h2>Tin cảnh báo mới nhất</h2><p class="muted">Tin được lấy từ nguồn RSS và lọc theo chủ đề an toàn số.</p></div><button class="button refresh-btn" id="refresh-news" type="button">⟳ <span>Làm mới</span></button></div>
+    <div class="news-tools"><label class="news-search"><span>⌕</span><input id="news-search" type="search" placeholder="Tìm thủ đoạn, từ khóa..." autocomplete="off"></label><div class="filter-row" id="news-filters"><button class="filter-chip selected" data-filter="all">Tất cả</button><button class="filter-chip" data-filter="giả mạo">Giả mạo</button><button class="filter-chip" data-filter="ngân hàng">Ngân hàng</button><button class="filter-chip" data-filter="tài khoản">Tài khoản</button><button class="filter-chip" data-filter="cuộc gọi">Cuộc gọi</button></div></div>
+    <div class="news-status" id="news-status" role="status">Đang kết nối nguồn tin...</div>
+    <div class="news-grid" id="news-list" aria-live="polite"></div>
+    <div class="news-empty hidden" id="news-empty"><div>⌕</div><h3>Chưa tìm thấy tin phù hợp</h3><p>Thử từ khóa khác hoặc chọn bộ lọc “Tất cả”.</p></div>
+  </section>
+
+  <section class="news-training">
+    <div class="training-icon">✦</div><div><div class="eyebrow">ĐỌC TIN THÔI CHƯA ĐỦ</div><h2>Gặp tình huống thật, phản xạ thế nào?</h2><p>Chuyển kiến thức từ cảnh báo thành kỹ năng qua các tình huống mô phỏng của SAFECLICK.</p></div><a class="button primary" href="practice.html">Luyện tập ngay →</a>
+  </section>
+  <div class="news-disclaimer">SAFECLICK tổng hợp thông tin tham khảo từ các nguồn được dẫn liên kết. Nội dung hiển thị không thay thế thông báo chính thức của cơ quan chức năng. Hãy mở bài gốc để kiểm tra đầy đủ ngữ cảnh.</div>
+  <footer class="site-footer"><div class="site-footer-inner"><section class="footer-about"><a class="footer-brand" href="index.html"><span class="footer-logo">✓</span><span><strong>SAFECLICK</strong><small>PHÒNG TẬP PHẢN XẠ AN TOÀN SỐ</small></span></a><h3>Về SAFECLICK</h3><p>SAFECLICK là mô hình huấn luyện kỹ năng an toàn số thông qua các tình huống lừa đảo trực tuyến giả lập có tính tương tác.</p></section><section class="footer-contact"><h3>Liên hệ</h3><p class="footer-intro">Nếu bạn có câu hỏi hoặc cần được hỗ trợ, hãy liên hệ với chúng tôi.</p><ul><li><span class="footer-icon">📍</span><span><b>Địa chỉ</b>Liên Châu, Yên Lạc, Phú Thọ, Việt Nam</span></li><li><span class="footer-icon">☎</span><span><b>Hotline</b><a href="tel:0339611210">0339 611 210</a></span></li><li><span class="footer-icon">✉</span><span><b>Email</b><a href="mailto:tyen41253@gmail.com">tyen41253@gmail.com</a></span></li></ul></section></div><div class="footer-bottom">© SAFECLICK · Mô hình giáo dục kỹ năng an toàn số</div></footer>
+</div>
+<script src="script.js"></script><script src="news.js"></script>
+</body></html>
