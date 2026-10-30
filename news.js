@@ -67,11 +67,11 @@ async function loadNews() {
     const response = await fetch(NEWS_API, { cache: "no-store" });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    if (!data.success || !Array.isArray(data.news)) throw new Error("Dữ liệu RSS không hợp lệ");
-    newsState.items = data.news;
+    if (!data.success || !Array.isArray(data.articles)) throw new Error("Dữ liệu RSS không hợp lệ");
+    newsState.items = data.articles;
     const updated = data.updatedAt ? new Date(data.updatedAt) : new Date();
     $news("updated-at").textContent = Number.isNaN(updated.getTime()) ? "Vừa cập nhật" : updated.toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"});
-    status.textContent = `Đã tải ${data.news.length} tin từ nguồn RSS. Nhấn “Đọc bài gốc” để xem nội dung đầy đủ.`;
+    status.textContent = `Đã tải ${data.articles.length} tin từ nguồn RSS. Nhấn "Đọc bài gốc" để xem nội dung đầy đủ.`;
     renderNews();
   } catch (error) {
     console.error("SAFECLICK news:", error);
