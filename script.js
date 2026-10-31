@@ -493,3 +493,24 @@ if($('changeEmail'))$('changeEmail').onclick=async()=>{
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initAi);
   else initAi();
 })();
+
+// SAFECLICK: yêu cầu đăng nhập trước khi dùng các dịch vụ luyện tập
+(function(){
+  const path = location.pathname.split('/').pop() || 'index.html';
+  const protectedPages = ['practice.html','calls.html','report.html','mission-01.html','mission-02.html','mission-03.html','mission-04.html'];
+  if (!protectedPages.includes(path)) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'sc-login-required';
+  overlay.innerHTML = '<div class="sc-login-card"><div style="font-size:34px">🔐</div><h2>Đăng nhập để sử dụng dịch vụ</h2><p>Bạn cần đăng nhập tài khoản SAFECLICK để sử dụng chức năng này.</p><a href="account.html" class="button primary">Đăng nhập ngay</a><a href="index.html" class="button ghost">Quay lại trang chủ</a></div>';
+  const style = document.createElement('style');
+  style.textContent = '#sc-login-required{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(3,12,28,.94);backdrop-filter:blur(8px)}.sc-login-card{width:min(460px,100%);padding:32px;text-align:center;border:1px solid rgba(95,190,255,.45);border-radius:22px;background:linear-gradient(145deg,#102b4d,#071629);color:#fff;box-shadow:0 20px 70px #0008}.sc-login-card h2{margin:14px 0 8px}.sc-login-card p{color:#c5d8eb;line-height:1.6;margin-bottom:22px}.sc-login-card .button{display:inline-flex;margin:5px;justify-content:center}';
+  document.head.appendChild(style);
+  document.body.appendChild(overlay);
+  if (window.firebase && firebase.auth) {
+    firebase.auth().onAuthStateChanged(user => {
+      overlay.style.display = user ? 'none' : 'flex';
+    });
+  } else {
+    overlay.style.display = 'flex';
+  }
+})();
